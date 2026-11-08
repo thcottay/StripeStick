@@ -1,0 +1,12 @@
+{
+  "name": "stripestick",
+  "version": "1.0.0",
+  "private": true,
+  "description": "StripeStick promotional site and waitlist.",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server/index.mjs",
+    "dev": "node --watch server/index.mjs"
+  }
+}

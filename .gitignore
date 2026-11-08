@@ -1,0 +1,5 @@
+.DS_Store
+node_modules/
+# Contains waitlist sign-ups (personal data). Never commit.
+data/
+.claude/

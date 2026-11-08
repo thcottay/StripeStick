@@ -1,0 +1,12 @@
+{
+  "name": "StripeStick",
+  "short_name": "StripeStick",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#244a45",
+  "theme_color": "#244a45",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

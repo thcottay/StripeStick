@@ -1,0 +1,11 @@
+/* Without JavaScript the waitlist sign-up renders inline at the end of the page. */
+.flow {
+  display: block;
+  position: static;
+  height: auto;
+}
+.flow__close,
+.flow__header,
+.flow__footer {
+  display: none;
+}
