@@ -31,4 +31,4 @@ Behind a reverse proxy, set `TRUST_PROXY=1` so rate limiting sees real client ad
 - No confirmation email is sent yet, although the flow tells people to check their inbox. Hook an email provider into `upsertSignup`.
 - The domain `https://stripestick.com` is assumed in `public/index.html`, `robots.txt`, `sitemap.xml` and `llms.txt`.
 - The social links in the dialog are assumed handles (`stripestick`). Update them in `public/index.html`.
-- Images were cut from the flattened design comps at 1x. Replace the files in `public/assets/img/` with the originals, at the same names and proportions, for sharper results on high-density screens.
+- Images were cut from the flattened design comps at 1x. Replace the files in `public/assets/img/` with the originals, at the same names and proportions, for sharper results on high-density screens. Compress them once they're final, because large PNGs slow the page.

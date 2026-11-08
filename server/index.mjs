@@ -159,8 +159,8 @@ async function serveStatic(req, res, pathname) {
   const etag = `"${info.size.toString(16)}-${Math.round(info.mtimeMs).toString(16)}"`;
   const headers = {
     'Content-Type': MIME[ext] || 'application/octet-stream',
-    // File names aren't fingerprinted, so code revalidates; images and fonts can be cached for a day.
-    'Cache-Control': ['.html', '.css', '.js'].includes(ext) ? 'no-cache' : 'public, max-age=86400',
+    // File names aren't fingerprinted, so code and images revalidate; fonts can be cached for a day.
+    'Cache-Control': ['.html', '.css', '.js', '.png', '.jpg'].includes(ext) ? 'no-cache' : 'public, max-age=86400',
     ETag: etag,
   };
   if (req.headers['if-none-match'] === etag) return send(res, 304, undefined, headers);

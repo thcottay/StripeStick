@@ -291,16 +291,24 @@ h2[tabindex="-1"]:focus { outline: none; }
 }
 .fault__plate {
   position: relative;
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-end;
-  min-height: 270px;
-  padding-right: 20px;
+  aspect-ratio: 400 / 450;
   background: var(--cream);
   margin-bottom: 24px;
 }
+/* Positioned so a plate's height never depends on the size of its image. */
+.fault__plate img {
+  position: absolute;
+  right: 20px;
+  bottom: 0;
+  width: auto;
+  height: 100%;
+  max-width: calc(100% - 20px);
+  object-fit: contain;
+  object-position: right bottom;
+}
 .fault__num {
   position: absolute;
+  z-index: 1;
   top: 22px;
   left: 24px;
   font-family: var(--display);
@@ -373,11 +381,11 @@ h2[tabindex="-1"]:focus { outline: none; }
   align-items: center;
   margin-top: 16px;
 }
-.stages--1 { grid-template-columns: minmax(0, 148fr) clamp(32px, 5.2vw, 75px) minmax(0, 428fr); }
-.stages--2 { grid-template-columns: minmax(0, 195fr) clamp(32px, 5.2vw, 75px) minmax(0, 252fr); padding-inline: 11%; }
-.stages--3 { grid-template-columns: minmax(0, 270fr) clamp(32px, 5.2vw, 75px) minmax(0, 240fr); padding-inline: 5%; }
+.stages--1 { grid-template-columns: minmax(0, 278fr) clamp(32px, 5.2vw, 75px) minmax(0, 846fr); }
+.stages--2 { grid-template-columns: minmax(0, 388fr) clamp(32px, 5.2vw, 75px) minmax(0, 486fr); padding-inline: 11%; }
+.stages--3 { grid-template-columns: minmax(0, 533fr) clamp(32px, 5.2vw, 75px) minmax(0, 499fr); padding-inline: 5%; }
 .stage img { width: 100%; }
-.stage__pair { display: grid; grid-template-columns: 216fr 212fr; align-items: center; }
+.stage__pair { display: grid; grid-template-columns: 448fr 398fr; align-items: center; }
 .stage__arrow { justify-self: center; }
 .stage__label {
   display: block;
@@ -926,8 +934,7 @@ h2[tabindex="-1"]:focus { outline: none; }
 
   .faults, .tiles { grid-template-columns: minmax(0, 1fr); }
   .tile { min-height: 0; }
-  .fault__plate { min-height: 0; }
-  .fault__plate img { max-height: 250px; width: auto; }
+  .fault__plate { aspect-ratio: auto; height: clamp(340px, 100vw, 460px); }
 
   .view--signup, .view--done { grid-template-columns: minmax(0, 1fr); }
   .done__plate { min-height: 0; }
