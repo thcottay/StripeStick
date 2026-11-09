@@ -31,6 +31,7 @@
   --display: "Archivo Black", "Arial Black", Impact, sans-serif;
   --body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --focus: var(--green);
+  --header-height: 0px;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -38,6 +39,8 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Keeps anchor targets and keyboard focus clear of the sticky header. */
+  scroll-padding-top: var(--header-height);
 }
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
@@ -62,7 +65,6 @@ img { max-width: 100%; height: auto; }
 a { color: inherit; }
 button, input { font: inherit; color: inherit; }
 [hidden] { display: none !important; }
-[id] { scroll-margin-top: 16px; }
 h2[tabindex="-1"]:focus { outline: none; }
 
 :focus-visible {
@@ -194,6 +196,33 @@ h2[tabindex="-1"]:focus { outline: none; }
 
 /* Site header */
 .site-header { background: var(--green); color: var(--cream); }
+
+/* Short screens, such as phones in landscape or heavy zoom, keep the header in normal flow. */
+@media (min-height: 500px) {
+  :root { --header-height: 120px; }
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+}
+@media (min-height: 500px) and (max-width: 900px) {
+  :root { --header-height: 101px; }
+}
+/* The header's own links are always in view, so focusing one shouldn't scroll the page. */
+.site-header a { scroll-margin-top: calc(var(--header-height) * -1); }
+
+/* A hairline appears once scrolled, so the header stands apart from same-colored sections. */
+@supports (animation-timeline: scroll()) {
+  .site-header {
+    animation: header-divider linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 80px;
+  }
+  @keyframes header-divider {
+    to { box-shadow: 0 1px 0 rgba(191, 217, 204, .35); }
+  }
+}
 .site-header__inner {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -914,7 +943,7 @@ h2[tabindex="-1"]:focus { outline: none; }
 }
 
 @media (max-width: 900px) {
-  .site-header__inner { grid-template-columns: 1fr auto; padding-block: 16px 4px; }
+  .site-header__inner { grid-template-columns: 1fr auto; gap: 4px 24px; padding-block: 12px 0; }
   .site-nav { grid-column: 1 / -1; grid-row: 2; }
   .site-nav ul { justify-content: flex-start; margin-left: -8px; }
   .site-header__cta { min-width: 0; padding-inline: 20px; }
@@ -965,7 +994,7 @@ h2[tabindex="-1"]:focus { outline: none; }
   .stripe-card { grid-template-columns: minmax(0, 120px) minmax(0, 1fr); gap: 16px; padding: 16px; }
   .stripe-card strong { font-size: 1.25rem; }
   .site-header__cta { font-size: .9375rem; padding: 8px 12px; }
-  .site-nav a { font-size: .875rem; padding-inline: 4px; }
+  .site-nav a { font-size: .875rem; padding: 8px 4px; }
   .site-nav li + li::before { margin-inline: 4px; }
   .choices--2 { grid-template-columns: minmax(0, 1fr); }
 }
@@ -985,5 +1014,6 @@ h2[tabindex="-1"]:focus { outline: none; }
 }
 
 @media print {
+  .site-header { position: static; }
   .site-header__cta, .hero__copy .btn, .cta .btn, .flow { display: none; }
 }
