@@ -28,10 +28,13 @@ export function createLeadStore({ url, secret }) {
   }
 
   return {
-    // Returns a signed token that authorizes the follow-up questionnaire for this sign-up.
+    // Returns whether this email is new, and a signed token that authorizes the follow-up questionnaire.
     async upsertSignup({ email, firstName }) {
-      await send({ action: 'signup', email, firstName, consentText: CONSENT_TEXT });
-      return `${Buffer.from(email).toString('base64url')}.${sign(email)}`;
+      const { created } = await send({ action: 'signup', email, firstName, consentText: CONSENT_TEXT });
+      if (created === undefined) {
+        console.warn('Apps Script did not report "created". Publish the latest Code.gs as a new version to enable confirmation emails.');
+      }
+      return { created: created === true, token: `${Buffer.from(email).toString('base64url')}.${sign(email)}` };
     },
 
     async saveAnswers(token, answers) {

@@ -1,11 +1,11 @@
 // Waitlist API on Netlify. The logic lives in server/waitlist.mjs, shared with the local server.
-import { createStoreFromEnv, runRoute } from '../../server/waitlist.mjs';
+import { createServicesFromEnv, runRoute } from '../../server/waitlist.mjs';
 
-const store = createStoreFromEnv();
+const services = createServicesFromEnv();
 
 export default async (req) => {
   const pathname = new URL(req.url).pathname.replace(/\/+$/, '');
-  const result = await runRoute(pathname, store, {
+  const result = await runRoute(pathname, services, {
     contentType: req.headers.get('content-type'),
     raw: await req.text(),
   });

@@ -94,6 +94,7 @@ function column_(name) {
 
 function saveSignup_(sheet, body) {
   var row = findRow_(sheet, body.email);
+  var created = !row;
   var values;
   if (row) {
     values = readRow_(sheet, row);
@@ -108,7 +109,7 @@ function saveSignup_(sheet, body) {
   }
   values[column_('Last updated')] = body.at;
   writeRow_(sheet, row, values);
-  return { ok: true };
+  return { ok: true, created: created };
 }
 
 function saveAnswers_(sheet, body) {

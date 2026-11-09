@@ -1,14 +1,21 @@
 // Waitlist API logic shared by the local Node server and the Netlify function.
+import { createMailer } from './email.mjs';
 import { createLeadStore } from './store.mjs';
 import { validateSignup, validateAnswers } from './validate.mjs';
 
 export const MAX_BODY = 16 * 1024;
 
-export const createStoreFromEnv = () =>
-  createLeadStore({
+export const createServicesFromEnv = () => ({
+  store: createLeadStore({
     url: process.env.GOOGLE_SHEETS_WEBHOOK_URL,
     secret: process.env.GOOGLE_SHEETS_SECRET,
-  });
+  }),
+  mailer: createMailer({
+    apiKey: process.env.RESEND_API_KEY,
+    from: process.env.EMAIL_FROM,
+    replyTo: process.env.EMAIL_REPLY_TO,
+  }),
+});
 
 const json = (status, payload) => ({ status, json: payload });
 const redirect = (location) => ({ status: 303, location });
@@ -26,7 +33,7 @@ function parseBody(contentType, raw) {
   throw Object.assign(new Error('unsupported'), { status: 415 });
 }
 
-async function signup(store, { data, isForm }) {
+async function signup({ store, mailer }, { data, isForm }) {
   // Bots that fill the honeypot get a normal-looking success and nothing is stored.
   if (data.website) return isForm ? redirect('/thanks.html') : json(201, { token: 'ok' });
 
@@ -35,11 +42,14 @@ async function signup(store, { data, isForm }) {
     return isForm ? redirect('/#waitlist') : json(422, { error: 'Please check the highlighted fields.', fields: errors });
   }
 
-  const token = await store.upsertSignup(value);
+  const { token, created } = await store.upsertSignup(value);
+  // Only new sign-ups get an email, so the form can't be used to flood someone's inbox.
+  // Awaited because serverless hosts can stop the function once it responds.
+  if (created) await mailer.sendConfirmation(value);
   return isForm ? redirect('/thanks.html') : json(201, { token });
 }
 
-async function answers(store, { data }) {
+async function answers({ store }, { data }) {
   const { error, value } = validateAnswers(data.answers);
   if (error) return json(422, { error });
   if (typeof data.token !== 'string' || !(await store.saveAnswers(data.token, value))) {
@@ -54,10 +64,10 @@ export const API_ROUTES = {
 };
 
 // Returns { status, json } or { status, location } for the host to send.
-export async function runRoute(pathname, store, { contentType, raw }) {
+export async function runRoute(pathname, services, { contentType, raw }) {
   try {
     if (Buffer.byteLength(raw) > MAX_BODY) return json(413, { error: 'That request could not be processed.' });
-    return await API_ROUTES[pathname](store, parseBody(contentType, raw));
+    return await API_ROUTES[pathname](services, parseBody(contentType, raw));
   } catch (err) {
     if (err instanceof SyntaxError) return json(400, { error: 'That request could not be read.' });
     if (err.status) return json(err.status, { error: 'That request could not be processed.' });

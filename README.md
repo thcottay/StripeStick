@@ -51,6 +51,23 @@ The repository is public, so keep the secret and web app URL out of it. The shee
 
 Behind a reverse proxy, set `TRUST_PROXY=1` so rate limiting sees real client addresses.
 
+## Confirmation emails
+
+New sign-ups get one confirmation email through [Resend](https://resend.com), sent after their row is saved. Signing up again with the same email doesn't send another. If an email fails, the sign-up still succeeds and the failure is logged. The wording is in `server/email.mjs`.
+
+Setup:
+
+1. In Resend, add your domain and create an API key with sending access.
+2. Add the DNS records Resend lists wherever your domain's DNS is hosted, and wait for the domain to show as verified. Also add a DMARC record if you don't have one.
+3. Publish the latest `google-apps-script/Code.gs` with **Deploy > Manage deployments > Edit > New version**. Emails stay off until the sheet script reports new sign-ups.
+4. Set these environment variables, in Netlify's UI or on the local server:
+
+| Variable | Example |
+| --- | --- |
+| `RESEND_API_KEY` | `re_...` |
+| `EMAIL_FROM` | `StripeStick <hello@yourdomain.com>` |
+| `EMAIL_REPLY_TO` (optional) | A mailbox you monitor |
+
 ## Deploying to Netlify
 
 `netlify.toml` sets the publish folder, the waitlist URL rewrites and the security headers. `netlify/functions/waitlist.mjs` replaces the Node server's API and shares its logic through `server/waitlist.mjs`. The function limits each IP address to 20 requests a minute.
@@ -59,7 +76,6 @@ In the Netlify UI, leave the build command and base directory blank. Add `GOOGLE
 
 ## Before launch
 
-- No confirmation email is sent yet, although the flow tells people to check their inbox. Hook an email provider into `upsertSignup`.
 - The domain `https://stripestick.com` is assumed in `public/index.html`, `robots.txt`, `sitemap.xml` and `llms.txt`.
 - The social links in the dialog are assumed handles (`stripestick`). Update them in `public/index.html`.
 - Images were cut from the flattened design comps at 1x. Replace the files in `public/assets/img/` with the originals, at the same names and proportions, for sharper results on high-density screens. Compress them once they're final, because large PNGs slow the page.

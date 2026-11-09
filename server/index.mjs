@@ -4,7 +4,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { API_ROUTES, MAX_BODY, createStoreFromEnv, runRoute } from './waitlist.mjs';
+import { API_ROUTES, MAX_BODY, createServicesFromEnv, runRoute } from './waitlist.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -13,9 +13,12 @@ const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 20;
 
-const store = createStoreFromEnv();
+const services = createServicesFromEnv();
 if (!process.env.GOOGLE_SHEETS_WEBHOOK_URL || !process.env.GOOGLE_SHEETS_SECRET) {
   console.warn('GOOGLE_SHEETS_WEBHOOK_URL and GOOGLE_SHEETS_SECRET are not set. Waitlist sign-ups will fail.');
+}
+if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
+  console.warn('RESEND_API_KEY and EMAIL_FROM are not set. Confirmation emails will not be sent.');
 }
 
 const MIME = {
@@ -93,7 +96,7 @@ function readBody(req) {
 
 async function handleApi(req, res, pathname) {
   const raw = await readBody(req);
-  const result = await runRoute(pathname, store, { contentType: req.headers['content-type'], raw });
+  const result = await runRoute(pathname, services, { contentType: req.headers['content-type'], raw });
   if (result.location) return send(res, 303, '', { Location: result.location });
   return sendJson(res, result.status, result.json);
 }
