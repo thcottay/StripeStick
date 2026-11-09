@@ -1,6 +1,6 @@
 # StripeStick
 
-> StripeStick is a patent-pending golf alignment stick that clips to your shirt with magnets and turns with your shoulders and hips, so a golfer can see and feel their swing plane during the swing. It is launching soon. A waitlist is open at https://stripestick.com/#waitlist. Slogan: "See it. Feel it. Stripe it."
+> StripeStick is a patent-pending golf alignment stick that clips to your shirt with magnets and turns with your shoulders and hips, so a golfer can see and feel their swing plane during the swing. It is launching soon. A waitlist is open at https://stripestick.com/waitlist. Slogan: "See it. Feel it. Stripe it."
 
 ## What it is
 
@@ -31,4 +31,4 @@
 ## Links
 
 - [Product page](https://stripestick.com/): full description, drills and FAQ.
-- [Join the waitlist](https://stripestick.com/#waitlist): launch news and first access.
+- [Join the waitlist](https://stripestick.com/waitlist): launch news and first access.

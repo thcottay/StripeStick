@@ -10,6 +10,7 @@
   const live = dialog.querySelector('[data-flow-live]');
   const shareBlock = dialog.querySelector('[data-share]');
   const views = [...dialog.querySelectorAll('[data-view]')];
+  const tipLine = dialog.querySelector('[data-tip]');
 
   const FIELD_MESSAGES = {
     email: 'Enter a valid email address, like you@example.com.',
@@ -23,10 +24,41 @@
   };
   const NETWORK_ERROR = 'We couldn’t reach the server. Check your connection and try again.';
 
-  let token = null;
-  let firstName = '';
+  // Each step of the flow has its own address. The server returns the same page for all of them.
+  const ROUTES = {
+    '/waitlist': 'signup',
+    '/waitlist/questions': 'questionnaire',
+    '/waitlist/thanks': 'thanks',
+    '/waitlist/skipped': 'skipped',
+  };
+  const PATHS = Object.fromEntries(Object.entries(ROUTES).map(([path, view]) => [view, path]));
+  const HOME_TITLE = document.title;
+  const SESSION_KEY = 'stripestick-waitlist';
+
+  let session = readSession();
   let opener = null;
   let busy = false;
+
+  // Keeps progress through a refresh. Lasts only as long as the tab, and the flow still works without it.
+  function readSession() {
+    try {
+      return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || {};
+    } catch {
+      return {};
+    }
+  }
+
+  function updateSession(changes) {
+    session = { ...session, ...changes };
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch {
+      /* storage unavailable */
+    }
+  }
+
+  const routeForLocation = () => ROUTES[location.pathname.replace(/\/+$/, '')];
+  const urlFor = (path) => path + location.search;
 
   // JavaScript handles validation messaging from here; native validation is the no-JS fallback.
   signupForm.noValidate = true;
@@ -40,6 +72,7 @@
     });
     shareBlock.hidden = name !== 'thanks' && name !== 'skipped';
     statusLabel.textContent = active.dataset.status;
+    document.title = active.dataset.title;
     dialog.setAttribute('aria-labelledby', active.getAttribute('aria-labelledby'));
     dialog.scrollTop = 0;
     if (announce) live.textContent = announce;
@@ -55,26 +88,75 @@
     return views.find((view) => !view.hidden);
   }
 
-  function openFlow(trigger) {
-    opener = trigger || null;
+  // Where someone should land when they haven't asked for a step they can currently see.
+  function resumeView() {
+    return session.finished || (session.token ? 'questionnaire' : 'signup');
+  }
+
+  function canView(view) {
+    if (view === 'signup') return true;
+    if (view === 'questionnaire') return Boolean(session.token);
+    return session.finished === view;
+  }
+
+  function openDialog() {
     if (!dialog.open) dialog.showModal();
     document.documentElement.classList.add('is-locked');
     dialog.scrollTop = 0;
     focusHeading(currentView());
   }
 
-  dialog.addEventListener('close', () => {
-    document.documentElement.classList.remove('is-locked');
-    if (location.hash === '#waitlist') {
-      history.replaceState(null, '', location.pathname + location.search);
+  // Moves forward to a step, adding it to browser history.
+  function goTo(view, options) {
+    history.pushState(null, '', urlFor(PATHS[view]));
+    showView(view, options);
+  }
+
+  function openFlow(trigger) {
+    opener = trigger;
+    goTo(resumeView());
+    openDialog();
+  }
+
+  // Makes the screen match the address, for direct visits and the back and forward buttons.
+  function syncToLocation() {
+    const requested = routeForLocation();
+    if (!requested) {
+      if (dialog.open) closeFlow();
+      return;
     }
+    const view = canView(requested) ? requested : resumeView();
+    if (view !== requested) history.replaceState(null, '', urlFor(PATHS[view]));
+    showView(view);
+    openDialog();
+  }
+
+  // Runs right after closing, and again from the close event, which browsers can delay and which
+  // is the only signal when someone presses Escape. Safe to run twice.
+  function afterClose() {
+    if (dialog.open) return;
+    document.documentElement.classList.remove('is-locked');
+    document.title = HOME_TITLE;
+    if (routeForLocation()) history.pushState(null, '', urlFor('/'));
     if (opener) opener.focus();
-  });
+  }
+
+  function closeFlow() {
+    dialog.close();
+    afterClose();
+  }
+
+  dialog.addEventListener('close', afterClose);
+
+  window.addEventListener('popstate', syncToLocation);
 
   document.querySelectorAll('[data-waitlist-open]').forEach((trigger) => {
+    trigger.setAttribute('href', '/waitlist');
     trigger.setAttribute('role', 'button');
     trigger.setAttribute('aria-haspopup', 'dialog');
     trigger.addEventListener('click', (event) => {
+      // Leave ctrl/cmd-click and similar to the browser, so the link can open in a new tab.
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       openFlow(trigger);
     });
@@ -86,9 +168,7 @@
     });
   });
 
-  dialog.querySelector('[data-flow-close]').addEventListener('click', () => dialog.close());
-
-  if (location.hash === '#waitlist') openFlow(null);
+  dialog.querySelector('[data-flow-close]').addEventListener('click', closeFlow);
 
   // Field-level errors
   function setFieldError(name, message) {
@@ -183,10 +263,10 @@
         }
         return;
       }
-      token = body.token;
-      firstName = signupForm.elements.firstName.value.trim();
+      const firstName = signupForm.elements.firstName.value.trim();
+      updateSession({ token: body.token, firstName, finished: null, tip: null });
       fillFirstName(firstName);
-      showView('questionnaire', { announce: 'You’re on the list. Seven optional questions follow.' });
+      goTo('questionnaire', { announce: 'You’re on the list. Seven optional questions follow.' });
     } catch {
       setFormError(signupForm, NETWORK_ERROR);
     } finally {
@@ -205,7 +285,8 @@
   }
 
   function finishSkipped() {
-    showView('skipped', { announce: 'Questionnaire skipped. Your place is saved.' });
+    updateSession({ finished: 'skipped' });
+    goTo('skipped', { announce: 'Questionnaire skipped. Your place is saved.' });
   }
 
   dialog.querySelectorAll('[data-skip]').forEach((button) => {
@@ -225,22 +306,30 @@
 
     setBusy(questionsForm, true, 'Sending…');
     try {
-      const { ok, body } = await postJson('/api/waitlist/answers', { token, answers });
+      const { ok, body } = await postJson('/api/waitlist/answers', { token: session.token, answers });
       if (!ok) {
         setFormError(questionsForm, body.error || NETWORK_ERROR);
         return;
       }
       const fault = FAULT_TIPS[answers.fault];
-      dialog.querySelector('[data-tip]').textContent = fault
+      const tip = fault
         ? `Watch your inbox for drill tips on ${fault} before launch.`
         : 'Watch your inbox for drill tips before launch.';
-      showView('thanks', { announce: 'Answers received. Thank you.' });
+      updateSession({ finished: 'thanks', tip });
+      tipLine.textContent = tip;
+      goTo('thanks', { announce: 'Answers received. Thank you.' });
     } catch {
       setFormError(questionsForm, NETWORK_ERROR);
     } finally {
       setBusy(questionsForm, false);
     }
   });
+
+  // Restore progress and honor the address on load.
+  if (session.firstName) fillFirstName(session.firstName);
+  if (session.tip) tipLine.textContent = session.tip;
+  if (location.hash === '#waitlist') history.replaceState(null, '', urlFor('/waitlist'));
+  if (routeForLocation()) syncToLocation();
 
   // Share
   const shareButton = dialog.querySelector('[data-share-btn]');

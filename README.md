@@ -12,7 +12,16 @@ The site runs at http://localhost:3000. Set `PORT` to change the port. Requires 
 
 ## Waitlist flow
 
-The "Join the waitlist" buttons open a full-screen dialog. Linking to `/#waitlist` opens it directly.
+The "Join the waitlist" buttons open a full-screen dialog, and each step has its own URL:
+
+| URL | Step |
+| --- | --- |
+| `/waitlist` | Sign-up form |
+| `/waitlist/questions` | Confirmation and optional questionnaire |
+| `/waitlist/thanks` | Answers received |
+| `/waitlist/skipped` | Questionnaire skipped |
+
+Later steps need a sign-up in the same browser tab, so a direct visit without one goes to `/waitlist`. The server returns `index.html` for these paths, so a static host needs the same rewrites. Each URL suits analytics goals, for example counting visits to `/waitlist/questions` as conversions. Query strings such as UTM tags are kept through the flow.
 
 1. Sign-up: email, first name and consent. `POST /api/waitlist` returns a token.
 2. Optional questionnaire: `POST /api/waitlist/answers` with that token.
@@ -22,7 +31,23 @@ Without JavaScript the sign-up form renders at the end of the page, posts normal
 
 ## Where leads go
 
-Leads are saved to `data/leads.json` (git-ignored, because it holds personal data). Set `DATA_DIR` to store it elsewhere, on a persistent disk in production. To send leads to a database or CRM, replace `server/store.mjs`, which exposes `upsertSignup` and `saveAnswers`.
+Sign-ups and questionnaire answers go to a Google Sheet, through a small Apps Script attached to the sheet. Each email gets one row, and questionnaire answers fill in that same row. The script creates a `Waitlist` tab with headers on first use.
+
+Setup:
+
+1. Create a Google Sheet, then open **Extensions > Apps Script**.
+2. Replace the editor contents with [`google-apps-script/Code.gs`](google-apps-script/Code.gs) and save.
+3. Generate a secret with `openssl rand -hex 32`. In **Project Settings > Script Properties**, add `SHARED_SECRET` with that value.
+4. Choose **Deploy > New deployment > Web app**. Set **Execute as** to **Me** and **Who has access** to **Anyone**, then authorize it and copy the web app URL. "Anyone" only makes the URL reachable. The script rejects requests without the secret.
+5. Set these environment variables on the server, then restart it:
+
+```bash
+GOOGLE_SHEETS_WEBHOOK_URL="https://script.google.com/macros/s/.../exec" GOOGLE_SHEETS_SECRET="your-secret" npm start
+```
+
+Without both variables the site still runs, but sign-ups show an error and the server logs a warning. If you edit the script later, publish it with **Deploy > Manage deployments > Edit > New version** so the URL stays the same.
+
+The repository is public, so keep the secret and web app URL out of it. The sheet holds personal data, so limit who it's shared with.
 
 Behind a reverse proxy, set `TRUST_PROXY=1` so rate limiting sees real client addresses.
 

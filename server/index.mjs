@@ -15,7 +15,13 @@ const MAX_BODY = 16 * 1024;
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 20;
 
-const store = createLeadStore(process.env.DATA_DIR || path.join(ROOT, 'data'));
+const store = createLeadStore({
+  url: process.env.GOOGLE_SHEETS_WEBHOOK_URL,
+  secret: process.env.GOOGLE_SHEETS_SECRET,
+});
+if (!process.env.GOOGLE_SHEETS_WEBHOOK_URL || !process.env.GOOGLE_SHEETS_SECRET) {
+  console.warn('GOOGLE_SHEETS_WEBHOOK_URL and GOOGLE_SHEETS_SECRET are not set. Waitlist sign-ups will fail.');
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -134,6 +140,9 @@ async function handleAnswers(req, res) {
   return sendJson(res, 200, { ok: true });
 }
 
+// Steps of the waitlist flow. All are the same page, and waitlist.js shows the right step.
+const FLOW_PATHS = new Set(['/waitlist', '/waitlist/questions', '/waitlist/thanks', '/waitlist/skipped']);
+
 const compressedCache = new Map();
 
 async function serveStatic(req, res, pathname) {
@@ -145,7 +154,8 @@ async function serveStatic(req, res, pathname) {
   }
   if (decoded.includes('\0')) return send(res, 400, 'Bad request');
 
-  let filePath = path.normalize(path.join(PUBLIC_DIR, decoded));
+  const target = FLOW_PATHS.has(decoded.replace(/\/+$/, '')) ? 'index.html' : decoded;
+  let filePath = path.normalize(path.join(PUBLIC_DIR, target));
   if (filePath !== PUBLIC_DIR && !filePath.startsWith(PUBLIC_DIR + path.sep)) return send(res, 403, 'Forbidden');
 
   let info = await stat(filePath).catch(() => null);

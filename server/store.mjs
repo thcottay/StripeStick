@@ -1,76 +1,47 @@
-// Waitlist storage: a single JSON file written atomically. Swap this module to use a database or CRM.
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { randomBytes, randomUUID } from 'node:crypto';
-import path from 'node:path';
+// Waitlist storage: sends submissions to the Apps Script web app attached to the Google Sheet.
+// See google-apps-script/Code.gs for the receiving end.
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
-export const CONSENT_TEXT = 'I agree to receive StripeStick launch news and early-access emails.';
+const CONSENT_TEXT = 'I agree to receive StripeStick launch news and early-access emails.';
+const REQUEST_TIMEOUT_MS = 20_000;
 
-export function createLeadStore(dir) {
-  const file = path.join(dir, 'leads.json');
-  let leads = null;
-  let queue = Promise.resolve();
+export function createLeadStore({ url, secret }) {
+  const sign = (email) => createHmac('sha256', secret).update(`answers:${email}`).digest('base64url');
 
-  async function load() {
-    if (leads) return;
-    await mkdir(dir, { recursive: true, mode: 0o700 });
+  async function send(payload) {
+    if (!url || !secret) throw new Error('Google Sheet is not configured.');
+    // Apps Script answers with a redirect to the result, which fetch follows.
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, secret, at: new Date().toISOString() }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    let result;
     try {
-      leads = JSON.parse(await readFile(file, 'utf8'));
-    } catch (err) {
-      if (err.code !== 'ENOENT') throw err;
-      leads = [];
+      result = await response.json();
+    } catch {
+      throw new Error(`Google Sheet returned a non-JSON response (${response.status}). Check the web app is deployed with access for "Anyone".`);
     }
-  }
-
-  async function persist() {
-    const tmp = `${file}.${process.pid}.tmp`;
-    await writeFile(tmp, JSON.stringify(leads, null, 2), { mode: 0o600 });
-    await rename(tmp, file);
-  }
-
-  // Every mutation runs in order so concurrent requests can't lose writes.
-  function serialize(task) {
-    const run = queue.then(task, task);
-    queue = run.catch(() => {});
-    return run;
+    if (!result.ok) throw new Error(`Google Sheet rejected the request: ${result.error}`);
+    return result;
   }
 
   return {
-    // Returns a one-time token that authorizes the follow-up questionnaire for this sign-up.
-    upsertSignup({ email, firstName }) {
-      return serialize(async () => {
-        await load();
-        const now = new Date().toISOString();
-        const token = randomBytes(24).toString('hex');
-        const existing = leads.find((lead) => lead.email === email);
-        if (existing) {
-          Object.assign(existing, { firstName, token, updatedAt: now });
-        } else {
-          leads.push({
-            id: randomUUID(),
-            email,
-            firstName,
-            consent: { text: CONSENT_TEXT, at: now },
-            token,
-            answers: null,
-            createdAt: now,
-            updatedAt: now,
-          });
-        }
-        await persist();
-        return token;
-      });
+    // Returns a signed token that authorizes the follow-up questionnaire for this sign-up.
+    async upsertSignup({ email, firstName }) {
+      await send({ action: 'signup', email, firstName, consentText: CONSENT_TEXT });
+      return `${Buffer.from(email).toString('base64url')}.${sign(email)}`;
     },
 
-    saveAnswers(token, answers) {
-      return serialize(async () => {
-        await load();
-        const lead = leads.find((entry) => entry.token === token);
-        if (!lead) return false;
-        const now = new Date().toISOString();
-        Object.assign(lead, { answers, answersAt: now, updatedAt: now });
-        await persist();
-        return true;
-      });
+    async saveAnswers(token, answers) {
+      const [encoded, signature = ''] = token.split('.');
+      const email = Buffer.from(encoded, 'base64url').toString('utf8');
+      const expected = Buffer.from(sign(email));
+      const given = Buffer.from(signature);
+      if (given.length !== expected.length || !timingSafeEqual(given, expected)) return false;
+      const { found } = await send({ action: 'answers', email, answers });
+      return found;
     },
   };
 }

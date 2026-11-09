@@ -5,12 +5,25 @@ const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g;
 const clean = (value, max) =>
   typeof value === 'string' ? value.replace(CONTROL_CHARS, ' ').trim().slice(0, max) : '';
 
+// Form values mapped to the wording stored in the sheet.
 const CHOICES = {
-  fault: ['high_hands', 'low_hip_turn', 'hips_spinning', 'not_sure'],
-  handicap: ['under_10', '10_20', '20_plus', 'none'],
-  practice: ['range', 'home', 'course'],
-  prototype: ['yes', 'no'],
-  source: ['instagram', 'tiktok', 'youtube', 'friend', 'golf_pro', 'other'],
+  fault: {
+    high_hands: 'High hands at the top',
+    low_hip_turn: 'Not enough hip turn',
+    hips_spinning: 'Hips spinning out',
+    not_sure: 'Not sure',
+  },
+  handicap: { under_10: 'Under 10', '10_20': '10–20', '20_plus': '20+', none: 'Doesn’t keep one' },
+  practice: { range: 'Driving range', home: 'Home net or simulator', course: 'On the course' },
+  prototype: { yes: 'Yes', no: 'Not right now' },
+  source: {
+    instagram: 'Instagram',
+    tiktok: 'TikTok',
+    youtube: 'YouTube',
+    friend: 'Friend',
+    golf_pro: 'Golf pro',
+    other: 'Other',
+  },
 };
 const FREE_TEXT = { location: 80, price: 20 };
 
@@ -33,8 +46,9 @@ export function validateAnswers(answers) {
     return { error: 'Those answers could not be read.' };
   }
   const value = {};
-  for (const [key, options] of Object.entries(CHOICES)) {
-    if (options.includes(answers[key])) value[key] = answers[key];
+  for (const [key, labels] of Object.entries(CHOICES)) {
+    const picked = answers[key];
+    if (typeof picked === 'string' && Object.hasOwn(labels, picked)) value[key] = labels[picked];
   }
   for (const [key, max] of Object.entries(FREE_TEXT)) {
     const text = clean(answers[key], max);
