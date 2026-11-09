@@ -37,6 +37,7 @@ Without JavaScript the sign-up form renders at the end of the page, posts normal
 | Google Sheets and Apps Script | Waitlist storage | Email, first name, consent wording and questionnaire answers | `google-apps-script/Code.gs`, `GOOGLE_SHEETS_WEBHOOK_URL` and `GOOGLE_SHEETS_SECRET` |
 | [Resend](https://resend.com) | Confirmation emails | Email and first name | `server/email.mjs`, `RESEND_API_KEY`, `EMAIL_FROM` and `EMAIL_REPLY_TO` |
 | [Microsoft Clarity](https://clarity.microsoft.com) | Session recordings, heatmaps and funnel events | Page activity, with form inputs and first names masked | `public/js/analytics.js` |
+| [Google Analytics](https://analytics.google.com) | Traffic, sources and conversions | Page views and waitlist step events, with no names or emails | `public/js/analytics.js` |
 
 Fonts and images are self-hosted. The Instagram, TikTok and YouTube links are plain links with no embeds. Adding a service that loads in the browser also means updating the security policy in both `netlify.toml` and `server/index.mjs`. Keep this table in step with the privacy policy.
 
@@ -81,9 +82,11 @@ Setup:
 
 ## Analytics
 
-[Microsoft Clarity](https://clarity.microsoft.com) records sessions and heatmaps. It only loads once `CLARITY_PROJECT_ID` is set in `public/js/analytics.js`, and never on localhost. Form inputs are always masked by Clarity, and first names shown on the page are masked with `data-clarity-mask`.
+[Microsoft Clarity](https://clarity.microsoft.com) records sessions and heatmaps, and [Google Analytics](https://analytics.google.com) reports traffic and conversions. Each loads only once its ID is set in `public/js/analytics.js`, and neither runs on localhost. Form inputs are always masked by Clarity, and first names shown on the page are masked with `data-clarity-mask`.
 
-Each waitlist step sends a custom event, which you can use to build funnels and filter recordings:
+In Google Analytics, keep **Page changes based on browser history events** on under Admin > Data Streams > Enhanced measurement, so each waitlist URL counts as a page view. Mark `waitlist_questionnaire` as a key event to count sign-ups.
+
+Each waitlist step sends the same custom event to both services:
 
 | Event | Meaning |
 | --- | --- |
@@ -101,6 +104,6 @@ In the Netlify UI, leave the build command and base directory blank. Add `GOOGLE
 ## Before launch
 
 - The domain `https://stripestick.com` is assumed in `public/index.html`, `robots.txt`, `sitemap.xml` and `llms.txt`.
-- Publish a privacy policy that covers session recording, and add a consent banner if the site will have EU, UK or Swiss visitors.
+- Publish a privacy policy that covers session recording and analytics cookies, and add a consent banner if the site will have EU, UK or Swiss visitors.
 - The social links in the dialog are assumed handles (`stripestick`). Update them in `public/index.html`.
 - Images were cut from the flattened design comps at 1x. Replace the files in `public/assets/img/` with the originals, at the same names and proportions, for sharper results on high-density screens. Compress them once they're final, because large PNGs slow the page.

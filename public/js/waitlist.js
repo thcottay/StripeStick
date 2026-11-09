@@ -77,7 +77,7 @@
     dialog.scrollTop = 0;
     if (announce) live.textContent = announce;
     if (dialog.open) focusHeading(active);
-    window.clarity?.('event', `waitlist_${name}`);
+    window.trackEvent?.(`waitlist_${name}`);
   }
 
   function focusHeading(view) {
@@ -109,6 +109,8 @@
 
   // Moves forward to a step, adding it to browser history.
   function goTo(view, options) {
+    // Analytics reads the title when the address changes, so it has to be set first.
+    document.title = views.find((el) => el.dataset.view === view).dataset.title;
     history.pushState(null, '', urlFor(PATHS[view]));
     showView(view, options);
   }

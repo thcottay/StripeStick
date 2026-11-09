@@ -39,7 +39,7 @@ const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.json', '.webmanifest', '
 
 const SECURITY_HEADERS = {
   'Content-Security-Policy':
-    "default-src 'self'; img-src 'self' data: https://*.clarity.ms https://c.bing.com; script-src 'self' https://*.clarity.ms; style-src 'self'; font-src 'self'; connect-src 'self' https://*.clarity.ms https://c.bing.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+    "default-src 'self'; img-src 'self' data: https://*.clarity.ms https://c.bing.com https://www.googletagmanager.com https://*.google-analytics.com; script-src 'self' https://*.clarity.ms https://www.googletagmanager.com; style-src 'self'; font-src 'self'; connect-src 'self' https://*.clarity.ms https://c.bing.com https://www.googletagmanager.com https://*.google-analytics.com https://*.google.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
