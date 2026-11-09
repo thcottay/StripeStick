@@ -1,0 +1,32 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+# Steps of the waitlist flow. All are the same page, and waitlist.js shows the right step.
+[[redirects]]
+  from = "/waitlist"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/waitlist/questions"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/waitlist/thanks"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/waitlist/skipped"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

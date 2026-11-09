@@ -4,21 +4,16 @@ import { readFile, stat } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createLeadStore } from './store.mjs';
-import { validateSignup, validateAnswers } from './validate.mjs';
+import { API_ROUTES, MAX_BODY, createStoreFromEnv, runRoute } from './waitlist.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const PORT = Number(process.env.PORT || 3000);
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
-const MAX_BODY = 16 * 1024;
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 20;
 
-const store = createLeadStore({
-  url: process.env.GOOGLE_SHEETS_WEBHOOK_URL,
-  secret: process.env.GOOGLE_SHEETS_SECRET,
-});
+const store = createStoreFromEnv();
 if (!process.env.GOOGLE_SHEETS_WEBHOOK_URL || !process.env.GOOGLE_SHEETS_SECRET) {
   console.warn('GOOGLE_SHEETS_WEBHOOK_URL and GOOGLE_SHEETS_SECRET are not set. Waitlist sign-ups will fail.');
 }
@@ -96,48 +91,11 @@ function readBody(req) {
   });
 }
 
-async function parseBody(req) {
+async function handleApi(req, res, pathname) {
   const raw = await readBody(req);
-  const type = String(req.headers['content-type'] || '').split(';')[0].trim();
-  if (type === 'application/json') {
-    const data = JSON.parse(raw || '{}');
-    if (typeof data !== 'object' || data === null || Array.isArray(data)) throw new SyntaxError('not an object');
-    return { data, isForm: false };
-  }
-  if (type === 'application/x-www-form-urlencoded') {
-    return { data: Object.fromEntries(new URLSearchParams(raw)), isForm: true };
-  }
-  throw Object.assign(new Error('unsupported'), { status: 415 });
-}
-
-async function handleSignup(req, res) {
-  const { data, isForm } = await parseBody(req);
-
-  // Bots that fill the honeypot get a normal-looking success and nothing is stored.
-  if (data.website) {
-    if (isForm) return send(res, 303, '', { Location: '/thanks.html' });
-    return sendJson(res, 201, { token: 'ok' });
-  }
-
-  const { errors, value } = validateSignup(data);
-  if (errors) {
-    if (isForm) return send(res, 303, '', { Location: '/#waitlist' });
-    return sendJson(res, 422, { error: 'Please check the highlighted fields.', fields: errors });
-  }
-
-  const token = await store.upsertSignup(value);
-  if (isForm) return send(res, 303, '', { Location: '/thanks.html' });
-  return sendJson(res, 201, { token });
-}
-
-async function handleAnswers(req, res) {
-  const { data } = await parseBody(req);
-  const { error, value } = validateAnswers(data.answers);
-  if (error) return sendJson(res, 422, { error });
-  if (typeof data.token !== 'string' || !(await store.saveAnswers(data.token, value))) {
-    return sendJson(res, 404, { error: 'We couldn’t match these answers to your sign-up. Your place on the waitlist is still saved.' });
-  }
-  return sendJson(res, 200, { ok: true });
+  const result = await runRoute(pathname, store, { contentType: req.headers['content-type'], raw });
+  if (result.location) return send(res, 303, '', { Location: result.location });
+  return sendJson(res, result.status, result.json);
 }
 
 // Steps of the waitlist flow. All are the same page, and waitlist.js shows the right step.
@@ -189,27 +147,20 @@ async function serveStatic(req, res, pathname) {
   return send(res, 200, body, headers);
 }
 
-const API_ROUTES = {
-  '/api/waitlist': handleSignup,
-  '/api/waitlist/answers': handleAnswers,
-};
-
 const server = createServer(async (req, res) => {
   const { pathname } = new URL(req.url, 'http://localhost');
   try {
-    const route = API_ROUTES[pathname];
-    if (route) {
+    if (API_ROUTES[pathname]) {
       if (req.method !== 'POST') return send(res, 405, '', { Allow: 'POST' });
       if (rateLimited(clientIp(req))) {
         return sendJson(res, 429, { error: 'Too many attempts. Please wait a minute and try again.' });
       }
-      return await route(req, res);
+      return await handleApi(req, res, pathname);
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, '', { Allow: 'GET, HEAD' });
     return await serveStatic(req, res, pathname);
   } catch (err) {
     if (res.headersSent) return res.end();
-    if (err instanceof SyntaxError) return sendJson(res, 400, { error: 'That request could not be read.' });
     if (err.status) {
       res.setHeader('Connection', 'close');
       return sendJson(res, err.status, { error: 'That request could not be processed.' });

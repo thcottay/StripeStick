@@ -224,6 +224,7 @@
       body: JSON.stringify(payload),
     });
     const body = await response.json().catch(() => ({}));
+    if (response.status === 429 && !body.error) body.error = 'Too many attempts. Please wait a minute and try again.';
     return { ok: response.ok, status: response.status, body };
   }
 

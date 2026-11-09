@@ -51,6 +51,12 @@ The repository is public, so keep the secret and web app URL out of it. The shee
 
 Behind a reverse proxy, set `TRUST_PROXY=1` so rate limiting sees real client addresses.
 
+## Deploying to Netlify
+
+`netlify.toml` sets the publish folder, the waitlist URL rewrites and the security headers. `netlify/functions/waitlist.mjs` replaces the Node server's API and shares its logic through `server/waitlist.mjs`. The function limits each IP address to 20 requests a minute.
+
+In the Netlify UI, leave the build command and base directory blank. Add `GOOGLE_SHEETS_WEBHOOK_URL` and `GOOGLE_SHEETS_SECRET` under **Site configuration > Environment variables**, available to all scopes or at least to Functions. Don't put them in `netlify.toml`, because functions can't read variables set there and the repository is public.
+
 ## Before launch
 
 - No confirmation email is sent yet, although the flow tells people to check their inbox. Hook an email provider into `upsertSignup`.
