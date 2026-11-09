@@ -68,6 +68,19 @@ Setup:
 | `EMAIL_FROM` | `StripeStick <hello@yourdomain.com>` |
 | `EMAIL_REPLY_TO` (optional) | A mailbox you monitor |
 
+## Analytics
+
+[Microsoft Clarity](https://clarity.microsoft.com) records sessions and heatmaps. It only loads once `CLARITY_PROJECT_ID` is set in `public/js/analytics.js`, and never on localhost. Form inputs are always masked by Clarity, and first names shown on the page are masked with `data-clarity-mask`.
+
+Each waitlist step sends a custom event, which you can use to build funnels and filter recordings:
+
+| Event | Meaning |
+| --- | --- |
+| `waitlist_signup` | Saw the sign-up form |
+| `waitlist_questionnaire` | Signed up and reached the questions |
+| `waitlist_thanks` | Submitted the questions |
+| `waitlist_skipped` | Skipped the questions |
+
 ## Deploying to Netlify
 
 `netlify.toml` sets the publish folder, the waitlist URL rewrites and the security headers. `netlify/functions/waitlist.mjs` replaces the Node server's API and shares its logic through `server/waitlist.mjs`. The function limits each IP address to 20 requests a minute.
@@ -77,5 +90,6 @@ In the Netlify UI, leave the build command and base directory blank. Add `GOOGLE
 ## Before launch
 
 - The domain `https://stripestick.com` is assumed in `public/index.html`, `robots.txt`, `sitemap.xml` and `llms.txt`.
+- Publish a privacy policy that covers session recording, and add a consent banner if the site will have EU, UK or Swiss visitors.
 - The social links in the dialog are assumed handles (`stripestick`). Update them in `public/index.html`.
 - Images were cut from the flattened design comps at 1x. Replace the files in `public/assets/img/` with the originals, at the same names and proportions, for sharper results on high-density screens. Compress them once they're final, because large PNGs slow the page.

@@ -77,6 +77,7 @@
     dialog.scrollTop = 0;
     if (announce) live.textContent = announce;
     if (dialog.open) focusHeading(active);
+    window.clarity?.('event', `waitlist_${name}`);
   }
 
   function focusHeading(view) {

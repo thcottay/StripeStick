@@ -26,7 +26,7 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+    Content-Security-Policy = "default-src 'self'; img-src 'self' data: https://*.clarity.ms https://c.bing.com; script-src 'self' https://*.clarity.ms; style-src 'self'; font-src 'self'; connect-src 'self' https://*.clarity.ms https://c.bing.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
