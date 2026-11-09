@@ -951,8 +951,8 @@ h2[tabindex="-1"]:focus { outline: none; }
   .display--hero { font-size: clamp(2.5rem, 13.4vw, 5.5rem); }
   .hero__inner { padding-block: 16px 48px; }
   .hero__art {
-    top: auto;
-    bottom: 0;
+    top: 0;
+    bottom: auto;
     left: auto;
     right: -6%;
     width: min(88%, 560px);
