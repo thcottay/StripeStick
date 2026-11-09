@@ -29,6 +29,17 @@ Later steps need a sign-up in the same browser tab, so a direct visit without on
 
 Without JavaScript the sign-up form renders at the end of the page, posts normally, and lands on `/thanks.html`.
 
+## Third-party services
+
+| Service | Used for | Data it receives | Configured in |
+| --- | --- | --- | --- |
+| [Netlify](https://www.netlify.com) | Hosting and the waitlist API function | Visitor requests and form submissions | `netlify.toml` and Netlify environment variables |
+| Google Sheets and Apps Script | Waitlist storage | Email, first name, consent wording and questionnaire answers | `google-apps-script/Code.gs`, `GOOGLE_SHEETS_WEBHOOK_URL` and `GOOGLE_SHEETS_SECRET` |
+| [Resend](https://resend.com) | Confirmation emails | Email and first name | `server/email.mjs`, `RESEND_API_KEY`, `EMAIL_FROM` and `EMAIL_REPLY_TO` |
+| [Microsoft Clarity](https://clarity.microsoft.com) | Session recordings, heatmaps and funnel events | Page activity, with form inputs and first names masked | `public/js/analytics.js` |
+
+Fonts and images are self-hosted. The Instagram, TikTok and YouTube links are plain links with no embeds. Adding a service that loads in the browser also means updating the security policy in both `netlify.toml` and `server/index.mjs`. Keep this table in step with the privacy policy.
+
 ## Where leads go
 
 Sign-ups and questionnaire answers go to a Google Sheet, through a small Apps Script attached to the sheet. Each email gets one row, and questionnaire answers fill in that same row. The script creates a `Waitlist` tab with headers on first use.
