@@ -35,7 +35,7 @@ Without JavaScript the sign-up form renders at the end of the page, posts normal
 | --- | --- | --- | --- |
 | [Netlify](https://www.netlify.com) | Hosting and the waitlist API function | Visitor requests and form submissions | `netlify.toml` and Netlify environment variables |
 | Google Sheets and Apps Script | Waitlist storage | Email, first name, consent wording and questionnaire answers | `google-apps-script/Code.gs`, `GOOGLE_SHEETS_WEBHOOK_URL` and `GOOGLE_SHEETS_SECRET` |
-| [Resend](https://resend.com) | Confirmation emails | Email and first name | `server/email.mjs`, `RESEND_API_KEY`, `EMAIL_FROM` and `EMAIL_REPLY_TO` |
+| [Resend](https://resend.com) | Confirmation emails and sign-up alerts | Email and first name | `server/email.mjs`, `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO` and `SIGNUP_NOTIFY_EMAIL` |
 | [Microsoft Clarity](https://clarity.microsoft.com) | Session recordings, heatmaps and funnel events | Page activity, with form inputs and first names masked | `public/js/analytics.js` |
 | [Google Analytics](https://analytics.google.com) | Traffic, sources and conversions | Page views and waitlist step events, with no names or emails | `public/js/analytics.js` |
 
@@ -79,6 +79,9 @@ Setup:
 | `RESEND_API_KEY` | `re_...` |
 | `EMAIL_FROM` | `StripeStick <hello@yourdomain.com>` |
 | `EMAIL_REPLY_TO` (optional) | A mailbox you monitor |
+| `SIGNUP_NOTIFY_EMAIL` (optional) | Where to send an alert for each new sign-up |
+
+The alert uses the same rule as the confirmation email, so repeat sign-ups don't trigger one. It's plain text with the person's email and first name. Keep the address in an environment variable, because the repository is public.
 
 ## Analytics
 

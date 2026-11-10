@@ -39,36 +39,50 @@ export function buildConfirmationEmail(firstName) {
   };
 }
 
-export function createMailer({ apiKey, from, replyTo }) {
+// Plain text only, and the subject is fixed, because the name and email are whatever was typed in the form.
+export function buildSignupNotification({ email, firstName }) {
   return {
-    async sendConfirmation({ email, firstName }) {
-      if (!apiKey || !from) {
-        console.warn('Confirmation email skipped: RESEND_API_KEY and EMAIL_FROM are not set.');
-        return;
+    subject: 'New StripeStick waitlist sign-up',
+    text: `Someone new joined the waitlist.\n\nEmail: ${email}\nFirst name: ${firstName}\n`,
+  };
+}
+
+export function createMailer({ apiKey, from, replyTo, notifyTo }) {
+  async function send(label, message) {
+    if (!apiKey || !from) {
+      console.warn(`${label} skipped: RESEND_API_KEY and EMAIL_FROM are not set.`);
+      return;
+    }
+    try {
+      const response = await fetch(RESEND_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'User-Agent': 'stripestick-waitlist/1.0',
+        },
+        body: JSON.stringify({ from, ...message }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      if (!response.ok) {
+        const detail = await response.text().catch(() => '');
+        console.error(`${label} failed (${response.status}): ${detail.slice(0, 300)}`);
       }
-      try {
-        const response = await fetch(RESEND_URL, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'User-Agent': 'stripestick-waitlist/1.0',
-          },
-          body: JSON.stringify({
-            from,
-            to: [email],
-            ...(replyTo ? { reply_to: replyTo } : {}),
-            ...buildConfirmationEmail(firstName),
-          }),
-          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        });
-        if (!response.ok) {
-          const detail = await response.text().catch(() => '');
-          console.error(`Confirmation email failed (${response.status}): ${detail.slice(0, 300)}`);
-        }
-      } catch (err) {
-        console.error('Confirmation email failed:', err.message);
-      }
+    } catch (err) {
+      console.error(`${label} failed:`, err.message);
+    }
+  }
+
+  return {
+    sendConfirmation: ({ email, firstName }) =>
+      send('Confirmation email', {
+        to: [email],
+        ...(replyTo ? { reply_to: replyTo } : {}),
+        ...buildConfirmationEmail(firstName),
+      }),
+
+    async sendSignupNotification(signup) {
+      if (notifyTo) await send('Sign-up notification', { to: [notifyTo], ...buildSignupNotification(signup) });
     },
   };
 }

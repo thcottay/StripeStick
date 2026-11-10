@@ -14,6 +14,7 @@ export const createServicesFromEnv = () => ({
     apiKey: process.env.RESEND_API_KEY,
     from: process.env.EMAIL_FROM,
     replyTo: process.env.EMAIL_REPLY_TO,
+    notifyTo: process.env.SIGNUP_NOTIFY_EMAIL,
   }),
 });
 
@@ -45,7 +46,7 @@ async function signup({ store, mailer }, { data, isForm }) {
   const { token, created } = await store.upsertSignup(value);
   // Only new sign-ups get an email, so the form can't be used to flood someone's inbox.
   // Awaited because serverless hosts can stop the function once it responds.
-  if (created) await mailer.sendConfirmation(value);
+  if (created) await Promise.all([mailer.sendConfirmation(value), mailer.sendSignupNotification(value)]);
   return isForm ? redirect('/thanks.html') : json(201, { token });
 }
 
